@@ -5,16 +5,19 @@ import com.keychain.wallet.api.dto.CreateWalletRequest;
 import com.keychain.wallet.api.dto.DeductRequest;
 import com.keychain.wallet.api.dto.OperationResponse;
 import com.keychain.wallet.api.dto.TopupRequest;
+import com.keychain.wallet.api.dto.TransactionPageResponse;
 import com.keychain.wallet.api.dto.WalletResponse;
 import com.keychain.wallet.service.WalletService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
@@ -54,5 +57,13 @@ public class WalletController {
     public OperationResponse deduct(@PathVariable UUID walletId,
                                     @Valid @RequestBody DeductRequest request) {
         return OperationResponse.from(walletService.deduct(walletId, request.orderId()));
+    }
+
+    @GetMapping("/{walletId}/transactions")
+    public TransactionPageResponse getTransactions(@PathVariable UUID walletId,
+                                                   @RequestParam(defaultValue = "0") int page,
+                                                   @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
+        return TransactionPageResponse.from(walletId, walletService.getTransactions(walletId, pageable));
     }
 }
