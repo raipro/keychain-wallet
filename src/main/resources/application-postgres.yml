@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:walletdb}
+    driver-class-name: org.postgresql.Driver
+    username: ${POSTGRES_USER:wallet}
+    password: ${POSTGRES_PASSWORD:wallet}
+
+  # schema.sql is idempotent (IF NOT EXISTS), safe to run on every boot
+  sql:
+    init:
+      mode: always
+
+  h2:
+    console:
+      enabled: false

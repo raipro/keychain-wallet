@@ -1,0 +1,13 @@
+# Maven build output (covers target/classes, target/test-classes, etc.)
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
