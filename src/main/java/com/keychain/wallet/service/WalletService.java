@@ -14,6 +14,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -103,12 +104,24 @@ public class WalletService {
                     throw new InsufficientBalanceException(walletId, amountPaise);
                 }
 
+                // The conditional UPDATE ran as raw SQL with clearAutomatically=true, so
+                // the persistence context is empty and this is a fresh SELECT of the
+                // authoritative committed balance. One extra round-trip per movement,
+                // accepted in exchange for not tracking the pre-balance ourselves.
+                // `now` is reused for the ledger row so the wallet's updated_at and the
+                // ledger entry's created_at are the same instant.
                 long balanceAfter = getWallet(walletId).getBalancePaise();
                 WalletTransaction transaction = transactionRepository.save(new WalletTransaction(
-                        walletId, type, amountPaise, balanceAfter, idempotencyKey, requestHash));
+                        walletId, type, amountPaise, balanceAfter, idempotencyKey, requestHash, now));
                 return new Outcome(transaction, false);
             });
         } catch (DataIntegrityViolationException e) {
+            // The only unique constraint that a concurrent request can hit here is
+            // uq_wallet_idempotency, so finding the winner's row means this was an
+            // idempotency race and we replay it. If a future schema adds another
+            // constraint (or the FK fires), the lookup misses and we rethrow the raw
+            // exception — add explicit handling here before introducing such a
+            // constraint, or it will surface as a 500.
             WalletTransaction winner = transactionRepository
                     .findByWalletIdAndIdempotencyKey(walletId, idempotencyKey)
                     .orElseThrow(() -> e);
@@ -116,8 +129,13 @@ public class WalletService {
         }
     }
 
+    // NOTE: the idempotency key space is shared across transaction types via the
+    // (wallet_id, idempotency_key) constraint. A top-up and a deduct on the same
+    // wallet using the same key string would collide. Because the request hash
+    // encodes the type, the collision surfaces as a loud 409, never a wrong replay.
+    // Callers are assumed to use distinct key namespaces (order ids vs top-up ids).
     private Outcome replay(WalletTransaction existing, String requestHash, String idempotencyKey) {
-        if (!java.util.Objects.equals(existing.getRequestHash(), requestHash)) {
+        if (!Objects.equals(existing.getRequestHash(), requestHash)) {
             throw new IdempotencyConflictException(idempotencyKey);
         }
         return new Outcome(existing, true);

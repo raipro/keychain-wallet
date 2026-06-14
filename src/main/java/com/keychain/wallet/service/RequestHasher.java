@@ -16,9 +16,13 @@ final class RequestHasher {
     }
 
     static String hash(Object... parts) {
+        // Length-prefix each part ("<len>:<value>|") so the encoding is unambiguous:
+        // no choice of delimiter inside a value (e.g. an orderId containing '|') can
+        // make two distinct inputs produce the same canonical string.
         StringBuilder canonical = new StringBuilder();
         for (Object part : parts) {
-            canonical.append(part).append('|');
+            String value = String.valueOf(part);
+            canonical.append(value.length()).append(':').append(value).append('|');
         }
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");

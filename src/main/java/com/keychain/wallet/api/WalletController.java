@@ -63,6 +63,9 @@ public class WalletController {
     public TransactionPageResponse getTransactions(@PathVariable UUID walletId,
                                                    @RequestParam(defaultValue = "0") int page,
                                                    @RequestParam(defaultValue = "20") int size) {
+        // Paging params are clamped (page >= 0, size in [1, 100]) rather than rejected
+        // with a 400 — deliberately lenient for a read endpoint, unlike the strict
+        // bean validation on the money-moving requests.
         Pageable pageable = PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100));
         return TransactionPageResponse.from(walletId, walletService.getTransactions(walletId, pageable));
     }

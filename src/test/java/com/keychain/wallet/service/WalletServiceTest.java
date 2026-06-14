@@ -9,9 +9,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -164,7 +166,7 @@ class WalletServiceTest {
         UUID id = fundedWallet(100_000L);
         int attempts = 10;
 
-        var transactionIds = java.util.concurrent.ConcurrentHashMap.<UUID>newKeySet();
+        var transactionIds = ConcurrentHashMap.<UUID>newKeySet();
         runConcurrently(attempts, i ->
                 transactionIds.add(walletService.deduct(id, "ORD-RACE").transaction().getId()));
 
@@ -198,7 +200,7 @@ class WalletServiceTest {
         ExecutorService executor = Executors.newFixedThreadPool(threads);
         CountDownLatch start = new CountDownLatch(1);
         try {
-            List<Future<?>> futures = new java.util.ArrayList<>();
+            List<Future<?>> futures = new ArrayList<>();
             for (int i = 0; i < threads; i++) {
                 final int index = i;
                 futures.add(executor.submit((Callable<Void>) () -> {

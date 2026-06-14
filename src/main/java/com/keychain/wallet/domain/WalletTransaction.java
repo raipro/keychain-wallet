@@ -53,7 +53,8 @@ public class WalletTransaction {
                              long amountPaise,
                              long balanceAfterPaise,
                              String idempotencyKey,
-                             String requestHash) {
+                             String requestHash,
+                             Instant createdAt) {
         this.id = UUID.randomUUID();
         this.walletId = walletId;
         this.type = type;
@@ -61,11 +62,16 @@ public class WalletTransaction {
         this.balanceAfterPaise = balanceAfterPaise;
         this.idempotencyKey = idempotencyKey;
         this.requestHash = requestHash;
+        this.createdAt = createdAt;
     }
 
     @PrePersist
     void onCreate() {
-        this.createdAt = Instant.now();
+        // The caller passes the same Instant used for the wallet's updated_at so the
+        // money movement carries one timestamp across both tables. Fallback only.
+        if (this.createdAt == null) {
+            this.createdAt = Instant.now();
+        }
     }
 
     public UUID getId() {
